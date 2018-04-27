@@ -21,17 +21,19 @@ class Packet :
     def start_timer(self):
         self.start_time=time.time()
         self.deadline =self.start_time + 100
+def Packetize(obj):
+    pkt = Packet()
+    pkt.data =obj['data']
+    pkt.ack_num=obj['seq_num']
+    pkt.ack_num=obj['ack_num']
+    pkt.check_sum=obj['check_sum']
+    return pkt
 class MyEncoder(json.JSONEncoder):
     def default(self, obj):
         if not isinstance(obj, Packet):
             return super(MyEncoder, self).default(obj)
-
         return obj.__dict__
-#class MyDecoder(obj):
-#    pkt = Packet()
-#    pkt.data =obj['data']
-#    pkt.ack_num=obj['seq_num']
-#    pkt.ack_num=obj['ack_num']
+
 def calculate_checksum(data):
 #    asciis = ord(char for char in data)  #convert generator to string ,string to list of chars 
 #    result = sum(asciis)
