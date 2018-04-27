@@ -3,7 +3,7 @@ import json
 seq=0
 class Packet :
     def __init__(self,data='',ack=-1):
-       self.check_sum =calculate_checksum(data)
+       self.check_sum =''
        seq =-1
        self.seq_num =seq      
        self.ack_num =ack
@@ -33,12 +33,31 @@ class MyEncoder(json.JSONEncoder):
         if not isinstance(obj, Packet):
             return super(MyEncoder, self).default(obj)
         return obj.__dict__
+def split_by_length(s,block_size):
+    w=[]
+    n=len(s)
+    for i in range(0,n,block_size):
+        w.append(s[i:i+block_size])
+    return w
 
-def calculate_checksum(data):
-#    asciis = ord(char for char in data)  #convert generator to string ,string to list of chars 
-#    result = sum(asciis)
-#    return result
-    return True
+def calculate_checksum(pkt):
+    text= json.dumps(pkt,cls=MyEncoder)
+    ascii =''
+    ascii=ascii.join(format(ord(char), 'b')for char in text)
+    splitted = split_by_length(ascii,16)
+    ans =0
+    for i in range(0,len(splitted)):
+        word = int(splitted[i],2)
+        ans += word
+    ans = bin(ans)[2:].zfill(16) 
+    return ans
+
+pkt =Packet()
+pkt.ack_num=-1
+pkt.check_sum=True
+pkt.data="hfasddasdfsdf"
+calculate_checksum(pkt)
+
 def read_file(filename):
     file_path=filename
     chunks =[]
