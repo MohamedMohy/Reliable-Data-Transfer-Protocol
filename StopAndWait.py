@@ -1,39 +1,13 @@
 import socket
 import os
 import json
-from main import Packet,read_file,calculate_checksum,toggle,MyEncoder,Packetize
+from main import Packet,read_file,calculate_checksum,toggle,MyEncoder,Packetize,UDP_IP,UDP_PORT_SENDER,timeout,send_Ack,rcv_file
 import time
 chunks=[]
-UDP_IP = "192.168.1.17"
-amora_ip="192.168.1.10"
-timeout=5
-UDP_PORT_SENDER =5102
-UDP_PORT_RECIEVER=5002
-
-def send_Ack(seq_num,sock,client_ip,reciever_port):
-    pck=Packet()
-    pck.ack_num=seq_num
-    pck.check_sum=calculate_checksum(pck)
-    sock.sendto(json.dumps(pck,cls=MyEncoder).encode(),(client_ip,reciever_port))
-    return pck
 
 def server():
-    sock = socket.socket(socket.AF_INET, # Internet
-                     socket.SOCK_DGRAM) # UDP
-    sock.bind((UDP_IP, UDP_PORT_SENDER))
-    sock.settimeout(timeout)
-    while True:
-        try:
-            (data,add)=sock.recvfrom(9216)
-            print(add)
-        except:
-            print("noting found! try again")
-            continue
-        if data is not None:
-            data = json.loads(data)
-            print(data)
-            sock.close()
-            serve_client(data,add[0],add[1]) # to be handled in thread 
+    (data,ip,port)= rcv_file()
+    serve_client(data,ip,port) # to be handled in thread 
             
                 
 def serve_client(data,c_ip,c_port): #we need to send the client ip to serve
@@ -56,13 +30,13 @@ def serve_client(data,c_ip,c_port): #we need to send the client ip to serve
         incoming_data = False
         while not incoming_data:
             print("sending the chunk number ",i)
-            sock.sendto(json.dumps(pkt,cls=MyEncoder).encode(),(amora_ip,UDP_PORT_RECIEVER))
+            sock.sendto(json.dumps(pkt,cls=MyEncoder).encode(),(c_ip,c_port))
             print("Pkt",i," transmitted")
-            incoming_data = wait_for_ack(pkt,sock)
+            incoming_data = wait_for_ack(sock)
             print(incoming_data, i)
 
     
-def wait_for_ack(pkt,sock):
+def wait_for_ack(sock):
     currnet_time = time.time()
     
     while time.time()<currnet_time+float(timeout):
@@ -73,6 +47,7 @@ def wait_for_ack(pkt,sock):
         if data is not None:
             data = json.loads(data)
             pkt = Packetize(data)
+            print(pkt.seq_num)
             if pkt.ack_num== -1:
                 print("Wrong Ack found!! retransmittig")
                 time.sleep(0.25)
