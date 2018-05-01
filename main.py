@@ -2,8 +2,9 @@ import time
 import json
 import random
 import socket
+import math
 seq=0
-UDP_IP = "192.168.1.42"
+UDP_IP = "192.168.1.184"
 timeout=5
 UDP_PORT_SENDER =5102
 class Packet :
@@ -14,8 +15,9 @@ class Packet :
        self.seq_num =seq      
        self.ack_num =ack
        self.start_time=0
-       self.deadline =0 #timeout = 1 second , while current_time<timeout wait for ack
+       self.deadline = float('inf')#timeout = 1 second , while current_time<timeout wait for ack
        self.data=''
+       self.is_sent=False
     def is_Ack(self):
         if self.ack_num == -1:
             return False
