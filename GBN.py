@@ -20,8 +20,7 @@ def drop_pkts(number,pkts):
     print(number,len(pkts))
     for i in range(number):
         x=round(plp(len(pkts)-1))
-        del pkts[x]
-
+        pkts[x].will_be_sent=0
 def serve_client(data,ip,port):
     global next_seq_num
     global base_pointer
@@ -48,12 +47,16 @@ def serve_client(data,ip,port):
         import traceback
         print(traceback.format_exc)
         print("threading error !!")
-    while True:
+    counter=0
+    while counter<next_seq_num:
         if next_seq_num >=len(chunks):
             break
         if base_pointer+window_size>next_seq_num and len(pkts)>len(sent_items):
             print("from sending thread!!! base_pointer =",base_pointer,"window_size = ",window_size," next_seq_num = ",next_seq_num)
-            sock.sendto(json.dumps(pkts[next_seq_num],cls=MyEncoder).encode(),(ip,port))
+            pkts[next_seq_num].deadline=time.time()+timeout
+            if pkts[next_seq_num].will_be_sent==1
+                sock.sendto(json.dumps(pkts[next_seq_num],cls=MyEncoder).encode(),(ip,port))
+                counter+=1
             print(pkts[next_seq_num].seq_num)
             sent_items.append(pkts[next_seq_num])
             if len(pkts)+1>next_seq_num:
@@ -74,7 +77,7 @@ def rcv_ack(ip,port,window_size,sock):
             global base_pointer
             if pkt.seq_num > base_pointer or pkt.seq_num ==-1:
                 base_pointer = pkt.seq_num
-                print(" from rcv_Acks !!! base_pointer =",base_pointer,"window_size = ",window_size," next_seq_num = ",next_seq_num)
+
         except Exception:
             if base_pointer+window_size == next_seq_num:
                continue

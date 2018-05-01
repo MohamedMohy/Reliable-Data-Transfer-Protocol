@@ -7,7 +7,8 @@ UDP_IP = "192.168.1.42"
 timeout=5
 UDP_PORT_SENDER =5102
 class Packet :
-    def __init__(self,data='',ack=-1):
+    def __init__(self,data='',ack=-1,will_be_sent=1):
+       self.will_be_sent=1
        self.check_sum =''
        seq =-1
        self.seq_num =seq      
