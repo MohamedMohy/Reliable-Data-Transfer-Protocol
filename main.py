@@ -5,7 +5,7 @@ import socket
 import math
 seq = 0
 UDP_IP = "192.168.1.184"
-timeout = 5
+timeout = 10
 UDP_PORT_SENDER = 5102
 
 
@@ -21,6 +21,7 @@ class Packet:
         self.deadline = float('inf')
         self.data = ''
         self.is_sent = False
+        self.is_acked=False
 
     def is_Ack(self):
         if self.ack_num == -1:

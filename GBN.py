@@ -50,6 +50,7 @@ def serve_client(data, ip, port):
         while next_seq_num < base_pointer + window_size:
             mutex.acquire()
             if base_pointer == len(pkts):
+                print("client served!")
                 break
             if next_seq_num >= len(pkts):
                 mutex.release()
@@ -98,7 +99,7 @@ def rcv_ack(ip, port, window_size, sock):
             mutex.acquire()
             global base_pointer
             if pkt.seq_num >= base_pointer:
-                base_pointer = pkt.seq_num+1
+                base_pointer = pkt.seq_num + 1
             mutex.release()
 
         except Exception:
