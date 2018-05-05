@@ -4,6 +4,7 @@ import json
 import time
 import socket
 SEQ_NUMBER = -1
+buffer = []
 
 
 def send_file_name(data, client_socket):
@@ -15,29 +16,28 @@ def send_file_name(data, client_socket):
 def send_acks(client_socket):
     new_packet = Packet.Packet("Ack", SEQ_NUMBER, 1)
     new_packet.deadline = time.time() + 100
-    print(new_packet.seq_num)
     client_socket.sendto(json.dumps(new_packet, cls=Packet.MyEncoder).encode(), (Shared.SERVER_IP, Shared.SERVER_PORT))
 
 
 def listen(client_socket):
     while True:
-        (packet, address) = client_socket.recvfrom(10000)
+        (packet, address) = client_socket.recvfrom(9216)
         packet = packet.decode()
         print(packet)
         packet = Packet.my_decoder(json.loads(packet))
         if packet is not None:
             if packet.is_ack():
-                print("khara")
+                print("Its Ack")
             else:
                 if packet.seq_num == SEQ_NUMBER+1:
-                    #file = open("packet.txt", "a")
-                    #file.write(packet.data)
-                    #file.close()
-                    increment()
-                    send_acks(client_socket)
+                        file = open("packet.txt", "a")
+                        file.write(packet.data)
+                        file.close()
+                        increment()
+                        send_acks(client_socket)
                 else:
                     send_acks(client_socket)
-
+                    print("out of order or duplicate")
 
 
 def client():
