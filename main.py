@@ -3,25 +3,25 @@ import json
 import random
 import socket
 import math
+
 seq = 0
 UDP_IP = "192.168.1.184"
-timeout = 10
+timeout = 2
 UDP_PORT_SENDER = 5102
 
 
 class Packet:
     def __init__(self, data='', ack=-1, will_be_sent=1):
         self.will_be_sent = 1
-        self.check_sum = ''
+        self.check_sum = 0
         seq = -1
         self.seq_num = seq
         self.ack_num = ack
         self.start_time = 0
-        # timeout = 1 second , while current_time<timeout wait for ack
         self.deadline = float('inf')
         self.data = ''
         self.is_sent = False
-        self.is_acked=False
+        self.is_acked = False
 
     def is_Ack(self):
         if self.ack_num == -1:
@@ -48,7 +48,7 @@ def Packetize(obj):
 
 
 def mapping(random_number, list_length):
-    return round(random_number*list_length)
+    return round(random_number * list_length)
 
 
 def drop_pkts(number, pkts):
@@ -73,14 +73,14 @@ def split_by_length(s, block_size):
     w = []
     n = len(s)
     for i in range(0, n, block_size):
-        w.append(s[i:i+block_size])
+        w.append(s[i:i + block_size])
     return w
 
 
-def send_Ack(seq_num, sock, ip, port):
+def send_Ack(data, seq_num, sock, ip, port):
     pkt = Packet()
     pkt.ack_num = 0
-    pkt.data = 'Ack'
+    pkt.data = data
     pkt.seq_num = seq_num
     pkt.check_sum = calculate_checksum(pkt)
     sock.sendto(json.dumps(pkt, cls=MyEncoder).encode(), (ip, port))
@@ -89,7 +89,7 @@ def send_Ack(seq_num, sock, ip, port):
 def calculate_checksum(pkt):
     text = json.dumps(pkt, cls=MyEncoder)
     ascii = ''
-    ascii = ascii.join(format(ord(char), 'b')for char in text)
+    ascii = ascii.join(format(ord(char), 'b') for char in text)
     splitted = split_by_length(ascii, 16)
     ans = 0
     for i in range(0, len(splitted)):

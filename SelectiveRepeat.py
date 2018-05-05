@@ -26,8 +26,8 @@ def serve_client(data, ip, port):
                          socket.SOCK_DGRAM)  # UDP
     sock.bind((UDP_IP, UDP_PORT_SENDER))
     sock.settimeout(timeout)
-    send_Ack(data['seq_num'], sock, ip, port)
     chunks = read_file(data["data"])
+    send_Ack(len(chunks), data['seq_num'], sock, ip, port)
     pkts = []
     for i in range(len(chunks)):
         pkt = Packet()
@@ -36,17 +36,8 @@ def serve_client(data, ip, port):
         pkt.check_sum = calculate_checksum(pkt)
         pkts.append(pkt)
     drop_pkts(mapping(plp(1), len(pkts)), pkts)
-    pkts[0].will_be_sent = 0
-    pkts[1].will_be_sent = 0
-    pkts[2].will_be_sent = 0
-    pkts[3].will_be_sent = 1
-    pkts[4].will_be_sent = 0
-    pkts[5].will_be_sent = 1
-    pkts[6].will_be_sent = 0
-    pkts[7].will_be_sent = 0
-
-    for i in pkts:
-        print(i.will_be_sent)
+    for i in range(len(pkts)):
+        print(pkts[i].will_be_sent," ",pkts[i].check_sum)
     try:
         _thread.start_new_thread(
             rcv_ack, (ip, port, window_size, sock, mutex, pkts))
@@ -54,24 +45,34 @@ def serve_client(data, ip, port):
     except Exception:
         print("threading error !!")
 
-    while base_pointer < len(pkts)-1:
+    while base_pointer < len(pkts):
         # check if base pointer pkt deadline is over,re transmitt
-        check_unsent(pkts[base_pointer], sock, ip, port)
-        if len(chunks)-base_pointer < window_size:
+        mutex.acquire()
+        try:
+            check_unsent(pkts[base_pointer], sock, ip, port,"first")
+        except IndexError:
+            mutex.release()
+            continue
+
+        if len(chunks) - base_pointer < window_size:
             time.sleep(timeout)
-        while next_seq_num < base_pointer+window_size:
+        while next_seq_num < base_pointer + window_size:
             mutex.acquire()
+            print("base pontnter = ",base_pointer," next_seq num = ",next_seq_num)
+            if check_all_sent(pkts):
+                time.sleep(0.1)
+                print("client served ! waiting for next client")
+                return
             if base_pointer == len(pkts):
                 print("client served!")
                 return
             # check if base pointer pkt deadline is over,re transmitt
-            check_unsent(pkts[base_pointer], sock, ip, port)
-
+            check_unsent(pkts[base_pointer], sock, ip, port,"second")
             if next_seq_num >= len(pkts):
+                time.sleep(0.2)
                 mutex.release()
                 break
-
-            pkts[next_seq_num].deadline = time.time()+timeout
+            pkts[next_seq_num].deadline = time.time() + timeout
             if pkts[next_seq_num].will_be_sent == 1 and not pkts[next_seq_num].is_sent:
                 sock.sendto(json.dumps(
                     pkts[next_seq_num], cls=MyEncoder).encode(), (ip, port))
@@ -84,42 +85,51 @@ def serve_client(data, ip, port):
             mutex.release()
 
 
-def check_unsent(unsent, sock, ip, port):
+def check_unsent(unsent, sock, ip, port,x):
     if unsent.deadline < time.time() and unsent.is_sent == False:
         sock.sendto(json.dumps(
-                    unsent, cls=MyEncoder).encode(), (ip, port))
-        unsent.is_sent=True
-        print("pkt number ", unsent.seq_num, " is sent")
+            unsent, cls=MyEncoder).encode(), (ip, port))
+        unsent.is_sent = True
+        print("base pontnter = ",base_pointer," next_seq num = ",next_seq_num)
+        print("pkt number ", unsent.seq_num, " is sent from check unsent ",x)
 
 
-def rcv_ack(ip, port, window_size, sock,  mutex, pkts):
+def check_all_sent(pkts):
+    for pkt in pkts:
+        if not pkt.is_sent:
+            return False
+    return True
+
+
+def rcv_ack(ip, port, window_size, sock, mutex, pkts):
     global base_pointer
     oldestUnAcked = 0
     while True:
+        mutex.acquire()
         try:
-            mutex.acquire()
             (data, add) = sock.recvfrom(9216)
             data = json.loads(data)
             pkt = Packetize(data)
             print("ack found!! with seq_num ", pkt.seq_num)
             pkts[pkt.seq_num].is_acked = True
-
             if pkt.seq_num == oldestUnAcked:
                 oldestUnAcked = pkt.seq_num + 1
                 base_pointer = oldestUnAcked
-            #get first un acked after it
+            # get first un acked after it
             if pkts[base_pointer].is_acked:
                 for i in range(window_size):
                     try:
-                        if pkts[base_pointer+i].is_acked:
-                            base_pointer=base_pointer+i
+                        if pkts[base_pointer + i].is_acked == False:  # check here!
+                            base_pointer = base_pointer + i
+                            oldestUnAcked = base_pointer
+                            break
                     except:
                         pass
-                base_pointer += 1
-            mutex.release()
-
+            print("oldest Unacked =",oldestUnAcked,"base pointer = ",base_pointer)
         except Exception:
             pass
+        mutex.release()
+        time.sleep(0.1)
     return -1
 
 

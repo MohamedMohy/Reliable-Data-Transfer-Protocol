@@ -5,7 +5,8 @@ import time
 import math
 import random
 import threading
-from main import Packet, Packetize, send_Ack, calculate_checksum, UDP_PORT_SENDER, UDP_IP, timeout, MyEncoder, rcv_file, timeout, read_file, plp, mapping, drop_pkts
+from main import Packet, Packetize, send_Ack, calculate_checksum, UDP_PORT_SENDER, UDP_IP, timeout, MyEncoder, rcv_file, \
+    timeout, read_file, plp, mapping, drop_pkts
 
 next_seq_num = 0
 base_pointer = 0
@@ -26,8 +27,8 @@ def serve_client(data, ip, port):
                          socket.SOCK_DGRAM)  # UDP
     sock.bind((UDP_IP, UDP_PORT_SENDER))
     sock.settimeout(timeout)
-    send_Ack(data['seq_num'], sock, ip, port)
     chunks = read_file(data["data"])
+    send_Ack(len(chunks), data['seq_num'], sock, ip, port)
     pkts = []
     for i in range(len(chunks)):
         pkt = Packet()
@@ -37,16 +38,13 @@ def serve_client(data, ip, port):
         pkts.append(pkt)
     drop_pkts(mapping(plp(1), len(pkts)), pkts)
 
-    # for i in pkts:
-    #     print(i.will_be_sent)
-
     try:
         _thread.start_new_thread(rcv_ack, (ip, port, window_size, sock))
 
     except Exception:
         print("threading error !!")
 
-    while base_pointer < len(pkts)-1:
+    while base_pointer < len(pkts) - 1:
         while next_seq_num < base_pointer + window_size:
             mutex.acquire()
             if base_pointer == len(pkts):
@@ -54,12 +52,11 @@ def serve_client(data, ip, port):
                 break
             if next_seq_num >= len(pkts):
                 mutex.release()
-
                 if base_pointer == len(pkts):
                     break
                 check_unsent(pkts[base_pointer])
                 continue
-            pkts[next_seq_num].deadline = time.time()+timeout
+            pkts[next_seq_num].deadline = time.time() + timeout
             if pkts[next_seq_num].will_be_sent == 1:
                 sock.sendto(json.dumps(
                     pkts[next_seq_num], cls=MyEncoder).encode(), (ip, port))
@@ -70,7 +67,6 @@ def serve_client(data, ip, port):
                 pkts[next_seq_num].will_be_sent = 1
                 next_seq_num += 1
             check_unsent(pkts[base_pointer])
-
             mutex.release()
 
         try:
@@ -103,7 +99,7 @@ def rcv_ack(ip, port, window_size, sock):
             mutex.release()
 
         except Exception:
-            if base_pointer+window_size == next_seq_num:
+            if base_pointer + window_size == next_seq_num:
                 continue
 
     return -1

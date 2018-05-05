@@ -1,8 +1,10 @@
 import socket
 import os
 import json
-from main import Packet, read_file, calculate_checksum, toggle, MyEncoder, Packetize, UDP_IP, UDP_PORT_SENDER, timeout, send_Ack, rcv_file
+from main import Packet, read_file, calculate_checksum, toggle, MyEncoder, Packetize, UDP_IP, UDP_PORT_SENDER, timeout, \
+    send_Ack, rcv_file,drop_pkts,mapping,plp
 import time
+
 chunks = []
 
 
@@ -19,8 +21,8 @@ def serve_client(data, c_ip, c_port):  # we need to send the client ip to serve
     seq = 0
     chunks = read_file(data["data"])
     print(len(chunks))
-    send_Ack(data['seq_num'], sock, c_ip, c_port)
-
+    send_Ack(len(chunks), data['seq_num'], sock, c_ip, c_port)
+    pkts = []
     for i in range(len(chunks)):
         pkt = Packet()
         pkt.data = chunks[i]
@@ -28,12 +30,21 @@ def serve_client(data, c_ip, c_port):  # we need to send the client ip to serve
         seq = toggle(seq)
         pkt.start_timer()
         pkt.check_sum = calculate_checksum(pkt)
+        pkts.append(pkt)
+    drop_pkts(mapping(plp(1), len(pkts)), pkts)
+    counter =0
+    for pkt in pkts:
+        if pkt.will_be_sent==0:
+            print("this pkt will be lost! waiting for timeout and retransmitting")
+            time.sleep(timeout)
+            pkt.will_be_sent=1
         incoming_data = False
         while not incoming_data:
-            print("sending the chunk number ", i)
+            print("sending the chunk number ", i," with check sum = ",pkt.check_sum)
             sock.sendto(json.dumps(pkt, cls=MyEncoder).encode(),
                         (c_ip, c_port))
-            print("Pkt", i, " transmitted")
+            print("Pkt", counter, " transmitted")
+            counter += 1
             incoming_data = wait_for_ack(sock)
             print(incoming_data, i)
 
@@ -41,7 +52,7 @@ def serve_client(data, c_ip, c_port):  # we need to send the client ip to serve
 def wait_for_ack(sock):
     currnet_time = time.time()
 
-    while time.time() < currnet_time+float(timeout):
+    while time.time() < currnet_time + float(timeout):
         try:
             (data, add) = sock.recvfrom(9216)
         except:
@@ -54,10 +65,6 @@ def wait_for_ack(sock):
                 print("Wrong Ack found!! retransmittig")
                 time.sleep(0.25)
                 return False
-            # if pkt.check_sum is not calculate_checksum(data['data']):
-            #     print("Corrupted Ack found!! retransmitting")
-            #     time.sleep(2)
-            #     return False
             print("Ack found!!")
             time.sleep(1)
             return True
