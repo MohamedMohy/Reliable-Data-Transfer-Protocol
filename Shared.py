@@ -1,4 +1,4 @@
-MY_IP = "127.0.0.1"
+MY_IP = "192.168.1.183"
 My_Port = None
 SERVER_IP = None
 SERVER_PORT = None

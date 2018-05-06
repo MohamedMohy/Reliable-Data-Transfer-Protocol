@@ -33,13 +33,14 @@ def listen(client_socket):
     while True:
         (packet, address) = client_socket.recvfrom(10000)
         packet = packet.decode()
-        packet = Packet.my_decoder(json.loads(packet))
         print(packet)
+        packet = Packet.my_decoder(json.loads(packet))
+        print(packet.check_sum)
         if packet is not None:
-            if packet.is_ack() or packet.seq_num != SEQ_NUMBER or packet.check_sum != calculate_checksum(packet):
+            if packet.is_ack() or packet.seq_num != SEQ_NUMBER or packet.check_sum != calculate_checksum(packet).__str__():
                 if packet.seq_num != SEQ_NUMBER:
                     send_acks(client_socket, 0)
-                    print('Duplicate')
+                    print('out of order')
                 elif packet.is_ack():
                     print("Ack")
                 else:
@@ -65,7 +66,8 @@ def client():
 
 
 def calculate_checksum(pkt):
-    pkt.check_sum = ''
+    temp = pkt.check_sum
+    pkt.check_sum = 0
     text = json.dumps(pkt, cls=Packet.MyEncoder)
     ascii = ''
     ascii = ascii.join(format(ord(char), 'b')for char in text)
@@ -75,11 +77,11 @@ def calculate_checksum(pkt):
         word = int(splitted[i], 2)
         ans += word
     ans = bin(ans)[2:].zfill(16)
+    pkt.check_sum=temp
     return ans
 
 
-def split_by_length(s,
-                    block_size):
+def split_by_length(s, block_size):
     w = []
     n = len(s)
     for i in range(0, n, block_size):

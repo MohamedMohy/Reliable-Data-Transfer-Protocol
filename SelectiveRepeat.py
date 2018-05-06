@@ -7,6 +7,7 @@ packets_buffer = []
 expected_packets = []
 SEQ_NUMBER = -1
 base_pointer = 0
+number_of_chunks = 0
 
 
 def send_acks(client_socket):
@@ -31,14 +32,38 @@ def write_buffered_packets():
 
 def biggest_seq_num():
     packets_buffer.sort(key=lambda x: x.seq_num, reverse=False)
-    return packets_buffer[3].seq_num
+    return packets_buffer[-1].seq_num
+
+
+def search_in_buffer(number):
+    for packet in packets_buffer:
+        if packet.seq_num == number:
+            packets_buffer.remove(packet)
+            break
+
+
+def check_base_pointer():
+    for packet in packets_buffer:
+        if base_pointer == packet.seq_num:
+            return packet
 
 
 def listen(client_socket):
     while True:
-        global SEQ_NUMBER
         global base_pointer
+        temp = check_base_pointer()
+        if temp is not None:
+            file = open("packet.txt", "a")
+            file.write(temp.data)
+            file.close()
+            search_in_buffer(temp.seq_num)
+            print("packet with number ", temp.seq_num, "is written")
+            base_pointer += 1
+            continue
+
+        global SEQ_NUMBER
         global packets_buffer
+        global number_of_chunks
         (packet, address) = client_socket.recvfrom(9216)
         packet = packet.decode()
         print(packet)
@@ -46,42 +71,35 @@ def listen(client_socket):
         if packet is not None:
             if packet.is_ack():
                 print("Its Ack")
+                number_of_chunks = packet.data
             else:
 
                 if packet.seq_num >= base_pointer and packet.seq_num <= base_pointer+Shared.WINDOW_SIZE-1:
                     if packet.seq_num == SEQ_NUMBER + 1:  # expected packet
-                        if len(packets_buffer) == 0:
-                            file = open("packet.txt", "a")
-                            file.write(packet.data)
-                            file.close()
+                        file = open("packet.txt", "a")
+                        file.write(packet.data)
+                        file.close()
+                        print("packet with number ", packet.seq_num, "is written")
                         increment()
                         send_acks(client_socket)
                         base_pointer += 1
-                        print(base_pointer)
-                        if len(packets_buffer) != 0:
-                            packets_buffer.append(packet)
-                        if len(packets_buffer) == Shared.WINDOW_SIZE:
-                            write_buffered_packets()
-                            packets_buffer.clear()
-                            base_pointer = biggest_seq_num()+1
-                            SEQ_NUMBER = biggest_seq_num()
 
                     else:
-
                         original_value = SEQ_NUMBER
                         SEQ_NUMBER = packet.seq_num
                         send_acks(client_socket)
                         SEQ_NUMBER = original_value
                         packets_buffer.append(packet)
-                        if len(packets_buffer) == Shared.WINDOW_SIZE:
-                            write_buffered_packets()
-                            packets_buffer.clear()
-                            base_pointer = biggest_seq_num()+1
-                            SEQ_NUMBER = biggest_seq_num()
 
                 else:
                     print("out of window range")
 
+        if SEQ_NUMBER == number_of_chunks-1:
+            for packet in packets_buffer:
+                file = open("packet.txt", "a")
+                file.write(packet.data)
+                file.close()
+                print("packet with number ", packet.seq_num, "is written")
 
 def increment():
     global SEQ_NUMBER
@@ -102,4 +120,3 @@ def client():
 
 
 client()
-
