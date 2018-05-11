@@ -5,7 +5,7 @@ import socket
 import math
 
 seq = 0
-UDP_IP = "192.168.1.184"
+UDP_IP = "127.0.0.1"
 timeout = 2
 UDP_PORT_SENDER = 5102
 
@@ -19,7 +19,7 @@ class Packet:
         self.ack_num = ack
         self.start_time = 0
         self.deadline = float('inf')
-        self.data = ''
+        self.data = data
         self.is_sent = False
         self.is_acked = False
 
@@ -38,12 +38,17 @@ class Packet:
         self.deadline = self.start_time + 100
 
 
-def Packetize(obj):
+def Packetize(dic):
     pkt = Packet()
-    pkt.data = obj['data']
-    pkt.seq_num = obj['seq_num']
-    pkt.ack_num = obj['ack_num']
-    pkt.check_sum = obj['check_sum']
+    pkt.data = dic['data']
+    pkt.seq_num = dic['seq_num']
+    pkt.ack_num = dic['ack_num']
+    pkt.check_sum = dic['check_sum']
+    pkt.deadline = dic['deadline']
+    pkt.is_sent = dic['is_sent']
+    pkt.is_acked = dic['is_acked']
+    pkt.will_be_sent = dic['will_be_sent']
+    pkt.start_time = dic['start_time']
     return pkt
 
 

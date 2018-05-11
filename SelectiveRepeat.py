@@ -4,6 +4,7 @@ import threading
 import time
 
 import _thread
+
 from main import (UDP_IP, UDP_PORT_SENDER, MyEncoder, Packet, Packetize,
                   calculate_checksum, drop_pkts, mapping, plp, rcv_file,
                   read_file, send_Ack, timeout)
@@ -49,11 +50,11 @@ def serve_client(data, ip, port):
         # check if base pointer pkt deadline is over,re transmitt
         mutex.acquire()
         try:
-            check_unsent(pkts[base_pointer], sock, ip, port,"first")
+            check_unsent(pkts[base_pointer], sock, ip, port)
         except IndexError:
             mutex.release()
             continue
-
+        mutex.release()
         if len(chunks) - base_pointer < window_size:
             time.sleep(timeout)
         while next_seq_num < base_pointer + window_size:
@@ -67,7 +68,7 @@ def serve_client(data, ip, port):
                 print("client served!")
                 return
             # check if base pointer pkt deadline is over,re transmitt
-            check_unsent(pkts[base_pointer], sock, ip, port,"second")
+            check_unsent(pkts[base_pointer], sock, ip, port)
             if next_seq_num >= len(pkts):
                 time.sleep(0.2)
                 mutex.release()
@@ -85,13 +86,11 @@ def serve_client(data, ip, port):
             mutex.release()
 
 
-def check_unsent(unsent, sock, ip, port,x):
+def check_unsent(unsent, sock, ip, port):
     if unsent.deadline < time.time() and unsent.is_sent == False:
         sock.sendto(json.dumps(
             unsent, cls=MyEncoder).encode(), (ip, port))
         unsent.is_sent = True
-        print("base pontnter = ",base_pointer," next_seq num = ",next_seq_num)
-        print("pkt number ", unsent.seq_num, " is sent from check unsent ",x)
 
 
 def check_all_sent(pkts):
@@ -129,7 +128,7 @@ def rcv_ack(ip, port, window_size, sock, mutex, pkts):
         except Exception:
             pass
         mutex.release()
-        time.sleep(0.1)
+        time.sleep(0.5)
     return -1
 
 
