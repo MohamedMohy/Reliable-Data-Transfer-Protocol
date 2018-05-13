@@ -1,18 +1,18 @@
 import socket
 import json
-import Packet
 import time
 import random
 import Shared
 import math
+import main 
 
 SEQ_NUMBER = 0
 
 
 def send_file_name(data, client_socket):
-    new_packet = Packet.Packet(data, SEQ_NUMBER)
+    new_packet = main.Packet(data, SEQ_NUMBER)
     new_packet.deadline = time.time() + 100
-    client_socket.sendto(json.dumps(new_packet, cls=Packet.MyEncoder).encode(), (Shared.SERVER_IP, Shared.SERVER_PORT))
+    client_socket.sendto(json.dumps(new_packet, cls=main.MyEncoder).encode(), (Shared.SERVER_IP, Shared.SERVER_PORT))
 
 
 def plp():
@@ -21,12 +21,12 @@ def plp():
 
 def send_acks(client_socket, seq_num):
     if seq_num == 1:
-        new_packet = Packet.Packet("Ack", SEQ_NUMBER, 1)
+        new_packet = main.Packet("Ack", SEQ_NUMBER, 1)
         toggle()
     else:
-        new_packet = Packet.Packet("Ack", SEQ_NUMBER, 1)
+        new_packet = main.Packet("Ack", SEQ_NUMBER, 1)
     new_packet.deadline = time.time() + 100
-    client_socket.sendto(json.dumps(new_packet, cls=Packet.MyEncoder).encode(), (Shared.SERVER_IP, Shared.SERVER_PORT))
+    client_socket.sendto(json.dumps(new_packet, cls=main.MyEncoder).encode(), (Shared.SERVER_IP, Shared.SERVER_PORT))
 
 
 def listen(client_socket):
@@ -34,14 +34,14 @@ def listen(client_socket):
         (packet, address) = client_socket.recvfrom(10000)
         packet = packet.decode()
         print(packet)
-        packet = Packet.my_decoder(json.loads(packet))
+        packet = main.Packetize(json.loads(packet))
         print(packet.check_sum)
         if packet is not None:
-            if packet.is_ack() or packet.seq_num != SEQ_NUMBER or packet.check_sum != calculate_checksum(packet).__str__():
+            if packet.is_Ack() or packet.seq_num != SEQ_NUMBER or packet.check_sum != calculate_checksum(packet).__str__():
                 if packet.seq_num != SEQ_NUMBER:
                     send_acks(client_socket, 0)
                     print('out of order')
-                elif packet.is_ack():
+                elif packet.is_Ack():
                     print("Ack")
                 else:
                     continue
@@ -68,7 +68,7 @@ def client():
 def calculate_checksum(pkt):
     temp = pkt.check_sum
     pkt.check_sum = 0
-    text = json.dumps(pkt, cls=Packet.MyEncoder)
+    text = json.dumps(pkt, cls=main.MyEncoder)
     ascii = ''
     ascii = ascii.join(format(ord(char), 'b')for char in text)
     splitted = split_by_length(ascii,16)
