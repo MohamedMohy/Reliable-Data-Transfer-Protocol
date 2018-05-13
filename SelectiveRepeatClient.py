@@ -1,5 +1,5 @@
 import time
-import Packet
+import main
 import Shared
 import json
 import socket
@@ -11,15 +11,15 @@ number_of_chunks = 0
 
 
 def send_acks(client_socket):
-    new_packet = Packet.Packet("Ack", SEQ_NUMBER, 1)
+    new_packet = main.Packet("Ack", SEQ_NUMBER, 1)
     new_packet.deadline = time.time() + 100
-    client_socket.sendto(json.dumps(new_packet, cls=Packet.MyEncoder).encode(), (Shared.SERVER_IP, Shared.SERVER_PORT))
+    client_socket.sendto(json.dumps(new_packet, cls=main.MyEncoder).encode(), (Shared.SERVER_IP, Shared.SERVER_PORT))
 
 
 def send_file_name(data, client_socket):
-    new_packet = Packet.Packet(data, SEQ_NUMBER)
+    new_packet = main.Packet(data, SEQ_NUMBER)
     new_packet.deadline = time.time() + 100
-    client_socket.sendto(json.dumps(new_packet, cls=Packet.MyEncoder).encode(), (Shared.SERVER_IP, Shared.SERVER_PORT))
+    client_socket.sendto(json.dumps(new_packet, cls=main.MyEncoder).encode(), (Shared.SERVER_IP, Shared.SERVER_PORT))
 
 
 def write_buffered_packets():
@@ -67,9 +67,9 @@ def listen(client_socket):
         (packet, address) = client_socket.recvfrom(9216)
         packet = packet.decode()
         print(packet)
-        packet = Packet.my_decoder(json.loads(packet))
+        packet = main.Packetize(json.loads(packet))
         if packet is not None:
-            if packet.is_ack():
+            if packet.is_Ack():
                 print("Its Ack")
                 number_of_chunks = packet.data
             else:
