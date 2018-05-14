@@ -4,9 +4,6 @@ import threading
 import time
 from main import (MyEncoder, timeout)
 
-base_pointer = 0
-next_seq_num = 0
-
 
 class SelectiveRepeatSimulation:
     def __init__(self, pkts, address, file_name, window_size=4, next_seq_num=0, base_pointer=0):
@@ -22,7 +19,6 @@ class SelectiveRepeatSimulation:
         self.oldestUnAcked = 0
 
     def serve_client(self):
-
         while self.base_pointer < len(self.pkts):
             self.mutex.acquire()
             try:
@@ -35,7 +31,7 @@ class SelectiveRepeatSimulation:
                 time.sleep(timeout)
             while self.next_seq_num < self.base_pointer + self.window_size:
                 self.mutex.acquire()
-                print("base pontnter = ", base_pointer, " next_seq num = ", self.next_seq_num)
+                print("base pontnter = ", self.base_pointer, " next_seq num = ", self.next_seq_num)
                 if self.check_all_sent():
                     time.sleep(0.1)
                     print("client served ! waiting for next client")
@@ -75,6 +71,8 @@ class SelectiveRepeatSimulation:
 
     def rcv_ack(self, pkt):
         print("ack found!! with seq_num ", pkt.seq_num)
+        if self.base_pointer >= len(self.pkts):
+            return -1
         self.mutex.acquire()
         self.pkts[pkt.seq_num].is_acked = True
         if pkt.seq_num == self.oldestUnAcked:

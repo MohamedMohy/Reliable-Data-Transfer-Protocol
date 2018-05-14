@@ -14,7 +14,7 @@ class StopAndWaitSimulation:
         self.connection.connect(address)
         self.address = address
         self.pkts = pkts
-        self.seq = 0
+        self.seq = 1
         self.file_name = file
         self.counter = 0
         self.send_pkt_flag = True
@@ -28,25 +28,26 @@ class StopAndWaitSimulation:
                 pkt.will_be_sent = 1
             self.send_pkt_flag = False
             self.counter += 1
+            self.seq = (self.seq + 1) % 2
             while not self.send_pkt_flag:
                 self.mutex.acquire()
-                print("sending the chunk number ", self.counter, " with check sum = ", pkt.check_sum)
+                pkt.seq_num = self.seq
+                print("sending the chunk number ", self.seq)
                 self.connection.send(json.dumps(pkt, cls=MyEncoder).encode())
                 print("Pkt", self.counter, " transmitted")
                 self.mutex.release()
-                time.sleep(0.1)
-            self.seq = (self.seq + 1) % 2
+                time.sleep(timeout)
 
     def rcv_ack(self, pkt):
-        self.mutex.acquire()
         if pkt.ack_num == -1:
             print("Wrong Ack found!! retransmittig")
             time.sleep(0.25)
             return False
         if pkt.seq_num == self.seq:
+            self.mutex.acquire()
             print("Ack found!!")
-            time.sleep(0.5)
+            print(self.seq)
             self.send_pkt_flag = True
-        self.mutex.release()
+            self.mutex.release()
+            
 
-# server()

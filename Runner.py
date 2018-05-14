@@ -2,33 +2,16 @@ import _thread
 import json
 import socket
 from threading import Lock
-
 import main
 from GBN import GBNSimulation
 from SelectiveRepeat import SelectiveRepeatSimulation
 from StopAndWait import StopAndWaitSimulation
-
 thread_table = dict()
-lock = Lock()
-
-
-def multiplex_or_create(pkt, address):
-    # with lock:
-    packet = main.Packetize(pkt)
-    if address in thread_table:
-        pass_pkt(packet, address)
-    else:
-        packets = chunks_into_pkts(main.read_file(packet.data))
-        protocol = int(input(
-            "please select a protocol for sending \n 1) Go Back N\n2) Selective Repeat\n 3) Stop And Wait \n"))
-        choose_protocol(packets, address, protocol, file_name=packet.data)
-
 
 def pass_pkt(pkt, address):
     global thread_table
     thread_table[address].rcv_ack(pkt)
     return
-
 
 def chunks_into_pkts(chunks):
     pkts = []
@@ -41,6 +24,16 @@ def chunks_into_pkts(chunks):
     main.drop_pkts(main.mapping(main.plp(1), len(pkts)), pkts)
     return pkts
 
+def multiplex_or_create(pkt, address):
+    # with lock:
+    packet = main.Packetize(pkt)
+    if address in thread_table:
+        pass_pkt(packet, address)
+    else:
+        packets = chunks_into_pkts(main.read_file(packet.data))
+        protocol = int(input(
+            "please select a protocol for sending \n 1) Go Back N\n2) Selective Repeat\n 3) Stop And Wait \n"))
+        choose_protocol(packets, address, protocol, file_name=packet.data)
 
 def choose_protocol(pkts, address, protocol, file_name):
     if protocol == 1:
@@ -51,20 +44,20 @@ def choose_protocol(pkts, address, protocol, file_name):
             print("thread fired!!")
         except:
             print("Error: unable to start thread")
-    if protocol == 2:
+    elif protocol == 2:
         selective_repeat = SelectiveRepeatSimulation(pkts, address, file_name, window_size=4)
         thread_table[address] = selective_repeat
         try:
-            _thread.start_new_thread(selective_repeat.serve_client(), ())
+            _thread.start_new_thread(selective_repeat.serve_client, ())
             print("thread fired!!")
         except:
             print("Error: unable to start thread")
-    if protocol == 3:
+    elif protocol == 3:
         stop_and_wait = StopAndWaitSimulation(pkts, address, file_name)
         thread_table[address] = stop_and_wait
 
         try:
-            _thread.start_new_thread(stop_and_wait.serve_client(), ())
+            _thread.start_new_thread(stop_and_wait.serve_client, ())
             print("thread fired!")
         except:
             print("Error: unable to start thread")
@@ -82,5 +75,5 @@ def runner():
         multiplex_or_create(pkt=json.loads(packet), address=add)
 
 
-
-runner()
+if __name__ == '__main__':
+    runner()

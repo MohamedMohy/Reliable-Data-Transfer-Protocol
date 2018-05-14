@@ -11,10 +11,9 @@ UDP_PORT_SENDER = 5102
 
 
 class Packet:
-    def __init__(self, data='', ack=-1, will_be_sent=1):
+    def __init__(self, data='', ack=-1, seq =0):
         self.will_be_sent = 1
         self.check_sum = 0
-        seq = -1
         self.seq_num = seq
         self.ack_num = ack
         self.start_time = 0

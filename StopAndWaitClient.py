@@ -4,7 +4,7 @@ import time
 import random
 import Shared
 import math
-import main 
+import main
 
 SEQ_NUMBER = 0
 
@@ -21,11 +21,12 @@ def plp():
 
 def send_acks(client_socket, seq_num):
     if seq_num == 1:
-        new_packet = main.Packet("Ack", SEQ_NUMBER, 1)
+        new_packet = main.Packet("Ack", ack=1,seq=SEQ_NUMBER)
         toggle()
     else:
-        new_packet = main.Packet("Ack", SEQ_NUMBER, 1)
+        new_packet = main.Packet("Ack", ack=1, seq=1)
     new_packet.deadline = time.time() + 100
+    print("sending ack with seq num = ",new_packet.seq_num)
     client_socket.sendto(json.dumps(new_packet, cls=main.MyEncoder).encode(), (Shared.SERVER_IP, Shared.SERVER_PORT))
 
 
@@ -33,11 +34,10 @@ def listen(client_socket):
     while True:
         (packet, address) = client_socket.recvfrom(10000)
         packet = packet.decode()
-        print(packet)
         packet = main.Packetize(json.loads(packet))
-        print(packet.check_sum)
+        print("packet found with seq_num = ",packet.seq_num,"My seq_num = ",SEQ_NUMBER)
         if packet is not None:
-            if packet.is_Ack() or packet.seq_num != SEQ_NUMBER or packet.check_sum != calculate_checksum(packet).__str__():
+            if packet.is_Ack() or packet.seq_num != SEQ_NUMBER:
                 if packet.seq_num != SEQ_NUMBER:
                     send_acks(client_socket, 0)
                     print('out of order')

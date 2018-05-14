@@ -12,6 +12,7 @@ number_of_chunks = 0
 
 def send_acks(client_socket):
     new_packet = main.Packet("Ack", SEQ_NUMBER, 1)
+    new_packet.seq_num = SEQ_NUMBER
     new_packet.deadline = time.time() + 100
     client_socket.sendto(json.dumps(new_packet, cls=main.MyEncoder).encode(), (Shared.SERVER_IP, Shared.SERVER_PORT))
 
