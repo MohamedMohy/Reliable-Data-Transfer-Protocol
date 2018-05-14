@@ -35,7 +35,7 @@ def listen(client_socket):
         (packet, address) = client_socket.recvfrom(10000)
         packet = packet.decode()
         packet = main.Packetize(json.loads(packet))
-        print("packet found with seq_num = ",packet.seq_num,"My seq_num = ",SEQ_NUMBER)
+        print("packet found with seq_num = ",packet.seq_num,"My seq_num = ")
         if packet is not None:
             if packet.is_Ack() or packet.seq_num != SEQ_NUMBER:
                 if packet.seq_num != SEQ_NUMBER:
